@@ -16,6 +16,7 @@ import sys
 
 import cv2
 import numpy as np
+import pickle
 
 import torch
 from torch.utils.data.dataset import Dataset
@@ -408,6 +409,47 @@ class Yolo_dataset(Dataset):
         target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
         return img, target
 
+class YoloModanetHumanDataset(Yolo_dataset):
+    def __init__(self, anno_path, cfg, train=True):
+        super(Yolo_dataset, self).__init__()
+        if cfg.mixup == 2:
+            print("cutmix=1 - isn't supported for Detector")
+            raise
+        elif cfg.mixup == 2 and cfg.letter_box:
+            print("Combination: letter_box=1 & mosaic=1 - isn't supported, use only 1 of these parameters")
+            raise
+
+        self.cfg = cfg
+        self.train = train
+
+        truth = {}
+        f = open(lable_path, 'r', encoding='utf-8')
+        with open(anno_path, 'rb') as f:
+            if train:
+                annos = pickle.load(f)['train']
+            else:
+                annos = pickle.load(f)['val']
+            
+            for anno in annos:
+                item = {}
+                item['boxes'] = np.array([obj['bbox'] for obj in anno['objects']])
+                #  convert to x1,y1,x2,y2
+                item['boxes'][...,2:] = item['boxes'][...,2:] + item['boxes'][...,:2]
+                item['labels'] = np.array([obj['category_id'] for obj in anno['objects']])
+                item['boxes_with_lable'] = np.hstack((item['boxes'], item['labels']))
+                item['file_name'] = anno['file_name']
+                truth[anno['id']]= item
+
+        for line in f.readlines():
+            data = line.split(" ")
+            truth[data[0]] = []
+            for i in data[1:]:
+                truth[data[0]].append([int(float(j)) for j in i.split(',')])
+
+        self.truth = truth
+        self.imgs = list(self.truth.keys())
+
+
 
 def get_image_id(filename:str) -> int:
     """
@@ -423,6 +465,9 @@ def get_image_id(filename:str) -> int:
     >>> no = f"{int(no):04d}"
     >>> return int(lv+no)
     """
+
+    image_id = int(os.path.splitext(os.path.basename(filename))[0])
+    return image_id
     raise NotImplementedError("Create your own 'get_image_id' function")
     lv, no = os.path.splitext(os.path.basename(filename))[0].split("_")
     lv = lv.replace("level", "")

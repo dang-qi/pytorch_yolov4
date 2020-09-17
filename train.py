@@ -296,7 +296,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     n_val = len(val_dataset)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch // config.subdivisions, shuffle=True,
-                              num_workers=8, pin_memory=True, drop_last=True, collate_fn=collate)
+                              num_workers=16, pin_memory=True, drop_last=True, collate_fn=collate)
 
     val_loader = DataLoader(val_dataset, batch_size=config.batch // config.subdivisions, shuffle=True, num_workers=8,
                             pin_memory=True, drop_last=True, collate_fn=val_collate)
@@ -360,9 +360,9 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
     save_prefix = 'Yolov4_epoch'
     saved_models = deque()
-    model.train()
+    #model.train()
     for epoch in range(epochs):
-        # model.train()
+        model.train()
         epoch_loss = 0
         epoch_step = 0
 
@@ -412,18 +412,20 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
                 pbar.update(images.shape[0])
 
-            if cfg.use_darknet_cfg:
-                eval_model = Darknet(cfg.cfgfile, inference=True)
-            else:
-                eval_model = Yolov4(cfg.pretrained, n_classes=cfg.classes, inference=True)
-            # eval_model = Yolov4(yolov4conv137weight=None, n_classes=config.classes, inference=True)
-            if torch.cuda.device_count() > 1:
-                eval_model.load_state_dict(model.module.state_dict())
-            else:
-                eval_model.load_state_dict(model.state_dict())
-            eval_model.to(device)
-            evaluator = evaluate(eval_model, val_loader, config, device)
-            del eval_model
+            #if cfg.use_darknet_cfg:
+            #    eval_model = Darknet(cfg.cfgfile, inference=True)
+            #else:
+            #    eval_model = Yolov4(cfg.pretrained, n_classes=cfg.classes, inference=True)
+            ## eval_model = Yolov4(yolov4conv137weight=None, n_classes=config.classes, inference=True)
+            #if torch.cuda.device_count() > 1:
+            #    eval_model.load_state_dict(model.module.state_dict())
+            #else:
+            #    eval_model.load_state_dict(model.state_dict())
+            #eval_model.to(device)
+            #evaluator = evaluate(eval_model, val_loader, config, device)
+            #del eval_model
+
+            evaluator = evaluate(model, val_loader, config, device)
 
             stats = evaluator.coco_eval['bbox'].stats
             writer.add_scalar('train/AP', stats[0], global_step)
@@ -540,8 +542,9 @@ def get_args(**kwargs):
     parser.add_argument('-dir', '--data-dir', type=str, default=None,
                         help='dataset dir', dest='dataset_dir')
     parser.add_argument('-pretrained', type=str, default=None, help='pretrained yolov4.conv.137')
-    parser.add_argument('-classes', type=int, default=80, help='dataset classes')
-    parser.add_argument('-train_label_path', dest='train_label', type=str, default='train.txt', help="train label path")
+    parser.add_argument('-classes', type=int, default=13, help='dataset classes')
+    parser.add_argument('-train_label_path', dest='train_label', type=str, default='data/modanet_train.txt', help="train label path")
+    parser.add_argument('-val_label_path', dest='val_label', type=str, default='data/modanet_val.txt', help="train label path")
     parser.add_argument(
         '-optimizer', type=str, default='adam',
         help='training optimizer',
@@ -606,6 +609,7 @@ def _get_date_str():
 if __name__ == "__main__":
     logging = init_logger(log_dir='log')
     cfg = get_args(**Cfg)
+    print(cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
