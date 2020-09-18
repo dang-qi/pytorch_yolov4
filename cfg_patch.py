@@ -23,8 +23,8 @@ Cfg.cfgfile = os.path.join(_BASE_DIR, 'cfg', 'yolov4-modanet.cfg')
 
 Cfg.batch = 64
 Cfg.subdivisions = 8
-Cfg.width = 800
-Cfg.height = 800
+Cfg.width = 256
+Cfg.height = 512
 Cfg.channels = 3
 Cfg.momentum = 0.949
 Cfg.decay = 0.0005
@@ -54,8 +54,7 @@ Cfg.blur = 0
 Cfg.gaussian = 0
 Cfg.boxes = 60  # box num
 Cfg.TRAIN_EPOCHS = 300
-Cfg.train_label = os.path.join(_BASE_DIR, 'data', 'modanet_train.txt')
-Cfg.val_label = os.path.join(_BASE_DIR, 'data' ,'modanet_val.txt')
+Cfg.anno_path = os.path.expanduser('~/data/annotations/modanet_with_human.pkl')
 Cfg.TRAIN_OPTIMIZER = 'adam'
 '''
 image_path1 x1,y1,x2,y2,id x1,y1,x2,y2,id x1,y1,x2,y2,id ...

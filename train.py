@@ -128,11 +128,11 @@ def bboxes_iou(bboxes_a, bboxes_b, xyxy=True, GIoU=False, DIoU=False, CIoU=False
 
 
 class Yolo_loss(nn.Module):
-    def __init__(self, n_classes=80, n_anchors=3, device=None, batch=2):
+    def __init__(self, n_classes=80, n_anchors=3, image_size=608, device=None, batch=2):
         super(Yolo_loss, self).__init__()
         self.device = device
         self.strides = [8, 16, 32]
-        image_size = 608
+        image_size = image_size
         self.n_classes = n_classes
         self.n_anchors = n_anchors
 
@@ -354,7 +354,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         )
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, burnin_schedule)
 
-    criterion = Yolo_loss(device=device, batch=config.batch // config.subdivisions, n_classes=config.classes)
+    criterion = Yolo_loss(device=device, batch=config.batch // config.subdivisions, n_classes=config.classes, image_size=config.width)
     # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
 
