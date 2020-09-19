@@ -588,6 +588,7 @@ class YoloModanetHumanDataset(Yolo_dataset):
         img_path = im['file_name']
         human_box = im['human_box']
         bboxes_with_cls_id = im['boxes_with_label']
+        bboxes_in_human = im['boxes_in_human_with_label']
         #bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
         img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
         # img_height, img_width = img.shape[:2]
@@ -602,7 +603,11 @@ class YoloModanetHumanDataset(Yolo_dataset):
         # boxes to coco format
         boxes = bboxes_with_cls_id[...,:4]
         boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
+        boxes_in_human = bboxes_in_human[...,:4]
+        boxes_in_human[..., 2:] = boxes_in_human[..., 2:] - boxes_in_human[..., :2]
         target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
+        target['boxes_in_human'] = torch.as_tensor(boxes_in_human, dtype=torch.float32)
+        target['human_box'] = torch.as_tensor(human_box, dtype=torch.float32)
         target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
         target['image_id'] = torch.tensor([self.imgs[index]])
         target['area'] = (target['boxes'][:,3])*(target['boxes'][:,2])
