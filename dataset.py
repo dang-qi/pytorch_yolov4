@@ -434,7 +434,7 @@ class YoloModanetHumanDataset(Yolo_dataset):
                 item['boxes'] = np.array([obj['bbox'] for obj in anno['objects']], dtype=np.float)
                 #  convert to x1,y1,x2,y2
                 item['boxes'][...,2:] = item['boxes'][...,2:] + item['boxes'][...,:2]
-                item['labels'] = np.array([obj['category_id'] for obj in anno['objects']], dtype=np.float)
+                item['labels'] = np.array([obj['category_id'] for obj in anno['objects']], dtype=np.float) - 1
                 item['labels'] = np.expand_dims(item['labels'], axis=1)
                 #print('box shape', itme['boxes'].shape)
                 #print('label shape', itme['labels'].shape)
