@@ -22,7 +22,7 @@ Cfg.use_darknet_cfg = True
 Cfg.cfgfile = os.path.join(_BASE_DIR, 'cfg', 'yolov4-modanet.cfg')
 
 Cfg.batch = 64
-Cfg.subdivisions = 2
+Cfg.subdivisions = 16
 Cfg.width = 128
 Cfg.height = 128
 Cfg.channels = 3
@@ -35,13 +35,14 @@ Cfg.hue = .1
 
 Cfg.learning_rate = 0.00261
 Cfg.burn_in = 1000
+#Cfg.burn_in = 10
 Cfg.max_batches = 500500
 Cfg.steps = [400000, 450000]
 Cfg.policy = Cfg.steps
 Cfg.scales = .1, .1
 
 Cfg.cutmix = 0
-Cfg.mosaic = 1
+Cfg.mosaic = 0
 
 Cfg.letter_box = 0
 Cfg.jitter = 0.2
@@ -69,6 +70,8 @@ elif Cfg.cutmix:
     Cfg.mixup = 2
 elif Cfg.mosaic:
     Cfg.mixup = 3
+else:
+    Cfg.mixup = 0
 
 Cfg.checkpoints = os.path.join(_BASE_DIR, 'checkpoints')
 Cfg.TRAIN_TENSORBOARD_DIR = os.path.join(_BASE_DIR, 'log')

@@ -310,6 +310,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     # writer.add_images('legend',
     #                   torch.from_numpy(train_dataset.label2colorlegend2(cfg.DATA_CLASSES).transpose([2, 0, 1])).to(
     #                       device).unsqueeze(0))
+    n_train_batch = len(train_loader)
     max_itr = config.TRAIN_EPOCHS * n_train
     # global_step = cfg.TRAIN_MINEPOCH * n_train
     global_step = 0
@@ -386,7 +387,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
                 epoch_loss += loss.item()
 
-                if global_step % config.subdivisions == 0:
+                if global_step % config.subdivisions == 0 or i == n_train_batch:
                     optimizer.step()
                     scheduler.step()
                     model.zero_grad()
@@ -631,7 +632,8 @@ if __name__ == "__main__":
         train(model=model,
               config=cfg,
               epochs=cfg.TRAIN_EPOCHS,
-              device=device, )
+              device=device,
+              log_step=20 )
     except KeyboardInterrupt:
         torch.save(model.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')

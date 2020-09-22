@@ -457,8 +457,8 @@ class YoloModanetHumanDataset(Yolo_dataset):
             return self._get_val_item(index)
         im = self.truth[self.imgs[index]]
         img_path = im['file_name']
-        bboxes = im['boxes_in_human_with_label']
-        human_box = im['human_box']
+        bboxes = np.copy(im['boxes_in_human_with_label'])
+        human_box = np.copy(im['human_box'])
         img_path = os.path.join(self.cfg.dataset_dir, img_path)
         use_mixup = self.cfg.mixup
         if random.randint(0, 1):
@@ -480,10 +480,10 @@ class YoloModanetHumanDataset(Yolo_dataset):
             if i != 0:
                 img_id = random.choice(list(self.truth.keys()))
                 im = self.truth[img_id]
-                bboxes = im['boxes_in_human_with_label']
+                bboxes = np.copy(im['boxes_in_human_with_label'])
                 img_path = im['file_name']
                 img_path = os.path.join(self.cfg.dataset_dir, img_path)
-                human_box = im['human_box']
+                human_box = np.copy(im['human_box'])
             img = cv2.imread(img_path)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             # crop human image here
@@ -586,9 +586,9 @@ class YoloModanetHumanDataset(Yolo_dataset):
         """
         im = self.truth[self.imgs[index]]
         img_path = im['file_name']
-        human_box = im['human_box']
-        bboxes_with_cls_id = im['boxes_with_label']
-        bboxes_in_human = im['boxes_in_human_with_label']
+        human_box = np.copy(im['human_box'])
+        bboxes_with_cls_id = np.copy(im['boxes_with_label'])
+        bboxes_in_human = np.copy(im['boxes_in_human_with_label'])
         #bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
         img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
         # img_height, img_width = img.shape[:2]
