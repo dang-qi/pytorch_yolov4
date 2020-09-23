@@ -8,6 +8,8 @@ import itertools
 import struct  # get_image_size
 import imghdr  # get_image_size
 
+from torchvision.ops import nms
+
 
 def sigmoid(x):
     return 1.0 / (np.exp(-x) + 1.)
@@ -163,7 +165,7 @@ def load_class_names(namesfile):
 
 
 
-def post_processing(img, conf_thresh, nms_thresh, output):
+def post_processing_old(img, conf_thresh, nms_thresh, output):
 
     # anchors = [12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401]
     # num_anchors = 9
@@ -231,3 +233,46 @@ def post_processing(img, conf_thresh, nms_thresh, output):
     print('-----------------------------------')
     
     return bboxes_batch
+
+def post_processing(conf_thresh, nms_thresh, output):
+
+    # anchors = [12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401]
+    # num_anchors = 9
+    # anchor_masks = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+    # strides = [8, 16, 32]
+    # anchor_step = len(anchors) // num_anchors
+
+    # [batch, num, 1, 4]
+    box_array = output[0]
+    # [batch, num, num_classes]
+    confs = output[1]
+
+    num_classes = confs.shape[2]
+
+    batch_confs, batch_classes = confs.max(2)
+
+    boxes_batch = []
+    for boxes, labels, scores in zip(box_array, batch_classes, batch_confs):
+        inds = scores > conf_thresh
+        boxes = boxes[inds]
+        labels = labels[inds]
+        scores = scores[inds]
+
+        bboxes_class = []
+
+        for j in range(num_classes):
+            ind_class = (labels==j)
+            boxes_class = boxes[ind_class]
+            scores_class = scores[ind_class]
+            labels_class = labels[ind_class]
+
+            keep = nms(boxes, scores, iou_threshold=nms_thresh)
+            if len(keep) > 0:
+                boxes_class = boxes[keep]
+                scores_class = scores[keep]
+                labels_class = labels[keep]
+                bboxes = torch.cat((boxes_class, scores_class.view(-1,1), scores_class.view(-1,1), labels_class.view(-1,1)))
+                bboxes = bboxes.detach().cpu().numpy().tolist()
+                bboxes_class.append(bboxes)
+        boxes_batch.append(bboxes_class)
+    return boxes_batch
