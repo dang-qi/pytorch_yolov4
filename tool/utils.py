@@ -3,6 +3,7 @@ import os
 import time
 import math
 import numpy as np
+import torch
 
 import itertools
 import struct  # get_image_size
@@ -243,7 +244,8 @@ def post_processing(conf_thresh, nms_thresh, output):
     # anchor_step = len(anchors) // num_anchors
 
     # [batch, num, 1, 4]
-    box_array = output[0]
+    box_array = output[0].squeeze(2)
+
     # [batch, num, num_classes]
     confs = output[1]
 
@@ -266,13 +268,14 @@ def post_processing(conf_thresh, nms_thresh, output):
             scores_class = scores[ind_class]
             labels_class = labels[ind_class]
 
-            keep = nms(boxes, scores, iou_threshold=nms_thresh)
+            keep = nms(boxes_class, scores_class, iou_threshold=nms_thresh)
             if len(keep) > 0:
-                boxes_class = boxes[keep]
-                scores_class = scores[keep]
-                labels_class = labels[keep]
-                bboxes = torch.cat((boxes_class, scores_class.view(-1,1), scores_class.view(-1,1), labels_class.view(-1,1)))
+                boxes_class = boxes_class[keep]
+                scores_class = scores_class[keep]
+                labels_class = labels_class[keep]
+                bboxes = torch.cat((boxes_class, scores_class.view(-1,1), scores_class.view(-1,1), labels_class.view(-1,1).float()), dim=1)
                 bboxes = bboxes.detach().cpu().numpy().tolist()
                 bboxes_class.append(bboxes)
+        bboxes_class = np.concatenate(bboxes_class, axis=0)
         boxes_batch.append(bboxes_class)
     return boxes_batch
