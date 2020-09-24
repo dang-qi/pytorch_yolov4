@@ -79,3 +79,5 @@ Cfg.TRAIN_TENSORBOARD_DIR = os.path.join(_BASE_DIR, 'log')
 Cfg.iou_type = 'iou'  # 'giou', 'diou', 'ciou'
 
 Cfg.keep_checkpoint_max = 10
+
+Cfg.evaluate_interval = 5

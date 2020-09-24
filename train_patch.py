@@ -27,6 +27,7 @@ from torch import optim
 from torch.nn import functional as F
 from tensorboardX import SummaryWriter
 from easydict import EasyDict as edict
+from evaluate import evaluate_nms
 
 #from dataset import Yolo_dataset
 from dataset import YoloModanetHumanDataset
@@ -429,21 +430,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             #evaluator = evaluate(eval_model, val_loader, config, device)
             #del eval_model
 
-            evaluator = evaluate(model, val_loader, config, device)
-
-            stats = evaluator.coco_eval['bbox'].stats
-            writer.add_scalar('train/AP', stats[0], global_step)
-            writer.add_scalar('train/AP50', stats[1], global_step)
-            writer.add_scalar('train/AP75', stats[2], global_step)
-            writer.add_scalar('train/AP_small', stats[3], global_step)
-            writer.add_scalar('train/AP_medium', stats[4], global_step)
-            writer.add_scalar('train/AP_large', stats[5], global_step)
-            writer.add_scalar('train/AR1', stats[6], global_step)
-            writer.add_scalar('train/AR10', stats[7], global_step)
-            writer.add_scalar('train/AR100', stats[8], global_step)
-            writer.add_scalar('train/AR_small', stats[9], global_step)
-            writer.add_scalar('train/AR_medium', stats[10], global_step)
-            writer.add_scalar('train/AR_large', stats[11], global_step)
+            #evaluator = evaluate(model, val_loader, config, device)
 
             if save_cp:
                 try:
@@ -462,6 +449,23 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                         os.remove(model_to_remove)
                     except:
                         logging.info(f'failed to remove {model_to_remove}')
+
+        if epoch % config.evaluate_interval == 0:
+            evaluator = evaluate_nms(model, val_loader, config, device, human_patch=True)
+
+            stats = evaluator.coco_eval['bbox'].stats
+            writer.add_scalar('train/AP', stats[0], global_step)
+            writer.add_scalar('train/AP50', stats[1], global_step)
+            writer.add_scalar('train/AP75', stats[2], global_step)
+            writer.add_scalar('train/AP_small', stats[3], global_step)
+            writer.add_scalar('train/AP_medium', stats[4], global_step)
+            writer.add_scalar('train/AP_large', stats[5], global_step)
+            writer.add_scalar('train/AR1', stats[6], global_step)
+            writer.add_scalar('train/AR10', stats[7], global_step)
+            writer.add_scalar('train/AR100', stats[8], global_step)
+            writer.add_scalar('train/AR_small', stats[9], global_step)
+            writer.add_scalar('train/AR_medium', stats[10], global_step)
+            writer.add_scalar('train/AR_large', stats[11], global_step)
 
     writer.close()
 
