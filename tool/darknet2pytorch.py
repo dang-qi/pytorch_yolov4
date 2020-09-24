@@ -468,10 +468,18 @@ class Darknet(nn.Module):
         state_dict = torch.load(model_path, map_location=device)
         if 'state_dict' in state_dict:
             state_dict = state_dict['state_dict']
+
+        state_dict_new = {}
+        for key, val in state_dict.items():
+            if key[:7] == 'module.':
+                state_dict_new[key[7:]] = val
+            else:
+                state_dict_new[key] = val
+
         if pretrained:
-            self.load_state_dict(state_dict, strict=False)
+            self.load_state_dict(state_dict_new, strict=False)
         else:
-            self.load_state_dict(state_dict, strict=True)
+            self.load_state_dict(state_dict_new, strict=True)
 
     # def save_weights(self, outfile, cutoff=0):
     #     if cutoff <= 0:

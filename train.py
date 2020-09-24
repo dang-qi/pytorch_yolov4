@@ -28,6 +28,8 @@ from torch.nn import functional as F
 from tensorboardX import SummaryWriter
 from easydict import EasyDict as edict
 
+from evaluate import evaluate_nms
+
 from dataset import Yolo_dataset
 from cfg import Cfg
 from models import Yolov4
@@ -326,17 +328,28 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         Pretrained:
     ''')
 
-    # learning rate setup
-    def burnin_schedule(i):
-        if i < config.burn_in:
-            factor = pow(i / config.burn_in, 4)
-        elif i < config.steps[0]:
-            factor = 1.0
-        elif i < config.steps[1]:
-            factor = 0.1
-        else:
-            factor = 0.01
-        return factor
+    if config.resume_epoch is None:
+        # learning rate setup
+        def burnin_schedule(i):
+            if i < config.burn_in:
+                factor = pow(i / config.burn_in, 4)
+            elif i < config.steps[0]:
+                factor = 1.0
+            elif i < config.steps[1]:
+                factor = 0.1
+            else:
+                factor = 0.01
+            return factor
+    else:
+        def burnin_schedule(i):
+            if i < config.steps[0]:
+                factor = 1.0
+            elif i < config.steps[1]:
+                factor = 0.1
+            else:
+                factor = 0.01
+            return factor
+
 
     if config.TRAIN_OPTIMIZER.lower() == 'adam':
         optimizer = optim.Adam(
@@ -361,7 +374,12 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     save_prefix = 'Yolov4_epoch'
     saved_models = deque()
     #model.train()
-    for epoch in range(epochs):
+    if config.resume_epoch is None:
+        start_epoch = 0
+    else:
+        start_epoch = config.resume_epoch - 1
+    evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
+    for epoch in range(start_epoch, epochs):
         model.train()
         epoch_loss = 0
         epoch_step = 0
@@ -425,22 +443,6 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             #evaluator = evaluate(eval_model, val_loader, config, device)
             #del eval_model
 
-            evaluator = evaluate(model, val_loader, config, device)
-
-            stats = evaluator.coco_eval['bbox'].stats
-            writer.add_scalar('train/AP', stats[0], global_step)
-            writer.add_scalar('train/AP50', stats[1], global_step)
-            writer.add_scalar('train/AP75', stats[2], global_step)
-            writer.add_scalar('train/AP_small', stats[3], global_step)
-            writer.add_scalar('train/AP_medium', stats[4], global_step)
-            writer.add_scalar('train/AP_large', stats[5], global_step)
-            writer.add_scalar('train/AR1', stats[6], global_step)
-            writer.add_scalar('train/AR10', stats[7], global_step)
-            writer.add_scalar('train/AR100', stats[8], global_step)
-            writer.add_scalar('train/AR_small', stats[9], global_step)
-            writer.add_scalar('train/AR_medium', stats[10], global_step)
-            writer.add_scalar('train/AR_large', stats[11], global_step)
-
             if save_cp:
                 try:
                     # os.mkdir(config.checkpoints)
@@ -458,6 +460,23 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                         os.remove(model_to_remove)
                     except:
                         logging.info(f'failed to remove {model_to_remove}')
+
+        if epoch % config.evaluate_interval == 0:
+            evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
+
+            stats = evaluator.coco_eval['bbox'].stats
+            writer.add_scalar('train/AP', stats[0], global_step)
+            writer.add_scalar('train/AP50', stats[1], global_step)
+            writer.add_scalar('train/AP75', stats[2], global_step)
+            writer.add_scalar('train/AP_small', stats[3], global_step)
+            writer.add_scalar('train/AP_medium', stats[4], global_step)
+            writer.add_scalar('train/AP_large', stats[5], global_step)
+            writer.add_scalar('train/AR1', stats[6], global_step)
+            writer.add_scalar('train/AR10', stats[7], global_step)
+            writer.add_scalar('train/AR100', stats[8], global_step)
+            writer.add_scalar('train/AR_small', stats[9], global_step)
+            writer.add_scalar('train/AR_medium', stats[10], global_step)
+            writer.add_scalar('train/AR_large', stats[11], global_step)
 
     writer.close()
 
@@ -542,6 +561,7 @@ def get_args(**kwargs):
                         help='GPU', dest='gpu')
     parser.add_argument('-dir', '--data-dir', type=str, default=None,
                         help='dataset dir', dest='dataset_dir')
+    parser.add_argument('--resume_epoch', type=int, default=-1, help='which epoch the training resume')
     parser.add_argument('-pretrained', type=str, default=None, help='pretrained yolov4.conv.137')
     parser.add_argument('-classes', type=int, default=13, help='dataset classes')
     parser.add_argument('-train_label_path', dest='train_label', type=str, default='data/modanet_train.txt', help="train label path")
@@ -619,6 +639,9 @@ if __name__ == "__main__":
         model = Darknet(cfg.cfgfile)
     else:
         model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
+
+    if cfg.load is not None:
+        model.load_model(cfg.load, device)
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
