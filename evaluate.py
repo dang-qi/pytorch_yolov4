@@ -104,6 +104,7 @@ def evaluate_nms(model, data_loader, cfg, device, human_patch=False, json_gt=Non
         # accumulate predictions from all images
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
+        return coco_evaluator
     else:
         with open('temp_result.json', 'w') as f:
             json.dump(result_json, f)
@@ -112,8 +113,7 @@ def evaluate_nms(model, data_loader, cfg, device, human_patch=False, json_gt=Non
         cocoEval.evaluate()
         cocoEval.accumulate()
         cocoEval.summarize()
-
-    return 
+        return cocoEval
 
 @torch.no_grad()
 def evaluate_nms_patch(model, data_loader, cfg, device, **kwargs):
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     cfg.gpu = '0'
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    checkpoint = 'checkpoints/Yolov4_modanet_128_epoch78.pth'
+    checkpoint = 'checkpoints/Yolov4_modanet_128_epoch104.pth'
     json_gt = os.path.expanduser('~/data/datasets/modanet/Annots/modanet_instances_val_new.json')
 
     if cfg.use_darknet_cfg:
@@ -195,10 +195,11 @@ if __name__ == '__main__':
     else:
         model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
 
+    model.load_model(checkpoint, device)
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
     model.to(device=device)
-    model.load_state_dict(torch.load(checkpoint), strict=True)
+    #model.load_state_dict(torch.load(checkpoint), strict=True)
 
     val_dataset = YoloModanetHumanDataset(cfg.anno_path, cfg, train=False)
 
@@ -208,4 +209,4 @@ if __name__ == '__main__':
                             pin_memory=True, drop_last=False, collate_fn=val_collate)
 
     evaluate_nms(model, val_loader, cfg, device, human_patch=True, json_gt=None)
-    evaluate_nms(model, val_loader, cfg, device, human_patch=True, json_gt=json_gt)
+    #evaluate_nms(model, val_loader, cfg, device, human_patch=True, json_gt=json_gt)
