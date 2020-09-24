@@ -462,6 +462,16 @@ class Darknet(nn.Module):
                 pass
             else:
                 print('unknown type %s' % (block['type']))
+    
+    def load_model(self, model_path, device, pretrained=False):
+        print('load weight from {}'.format(model_path))
+        state_dict = torch.load(model_path, map_location=device)
+        if 'state_dict' in state_dict:
+            state_dict = state_dict['state_dict']
+        if pretrained:
+            self.load_state_dict(state_dict, strict=False)
+        else:
+            self.load_state_dict(state_dict, strict=True)
 
     # def save_weights(self, outfile, cutoff=0):
     #     if cutoff <= 0:
