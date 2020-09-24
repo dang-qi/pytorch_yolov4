@@ -629,9 +629,7 @@ if __name__ == "__main__":
         model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
     
     if cfg.load is not None:
-        print('load weight from {}'.format(cfg.load))
-        state_dict = torch.load(cfg.load, map_location=device)
-        if isinstance(state_dict, dict)
+        model.load_model(cfg.load, device)
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
