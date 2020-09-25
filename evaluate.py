@@ -42,7 +42,7 @@ def evaluate_nms(model, data_loader, cfg, device, human_patch=False, json_gt=Non
         model_input = model_input.transpose(0, 3, 1, 2)
         model_input = torch.from_numpy(model_input).div(255.0)
         model_input = model_input.to(device)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        #targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
@@ -66,7 +66,7 @@ def evaluate_nms(model, data_loader, cfg, device, human_patch=False, json_gt=Non
 
             boxes[...,2:] = boxes[...,2:] - boxes[...,:2] # Transform [x1, y1, x2, y2] to [x1, y1, w, h]
             if human_patch:
-                human_box = target['human_box'].cpu().detach().numpy()
+                human_box = target['human_box']#.cpu().detach().numpy()
                 boxes[...,0] = boxes[...,0]*img_width + human_box[0]
                 boxes[...,1] = boxes[...,1]*img_height + human_box[1]
             else:
@@ -80,14 +80,14 @@ def evaluate_nms(model, data_loader, cfg, device, human_patch=False, json_gt=Non
                 # confs = output[...,4:].copy()
                 labels = torch.as_tensor(labels, dtype=torch.int64)
                 scores = torch.as_tensor(scores, dtype=torch.float32)
-                res[target["image_id"].item()] = {
+                res[target["image_id"]] = {
                     "boxes": boxes.unsqueeze(1),
                     "scores": scores,
                     "labels": labels,
                 }
             else:
                 for box, label, score in zip(boxes, labels, scores):
-                    single_result = {'image_id': int(target['image_id'].item()),
+                    single_result = {'image_id': int(target['image_id']),
                                     'bbox': box.tolist(),
                                     'category_id': int(label+1),
                                     'score':float(score)}
