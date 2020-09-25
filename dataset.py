@@ -241,7 +241,7 @@ def draw_box(img, bboxes):
 
 
 class Yolo_dataset(Dataset):
-    def __init__(self, lable_path, cfg, train=True):
+    def __init__(self, lable_path, cfg, train=True, dataset_name='modanet'):
         super(Yolo_dataset, self).__init__()
         if cfg.mixup == 2:
             print("cutmix=1 - isn't supported for Detector")
@@ -263,6 +263,7 @@ class Yolo_dataset(Dataset):
 
         self.truth = truth
         self.imgs = list(self.truth.keys())
+        self.dataset_name = dataset_name
 
     def __len__(self):
         return len(self.truth.keys())
@@ -404,7 +405,7 @@ class Yolo_dataset(Dataset):
         boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
         target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
         target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
-        target['image_id'] = torch.tensor([get_image_id(img_path)])
+        target['image_id'] = torch.tensor([get_image_id(img_path, self.dataset_name)])
         target['area'] = (target['boxes'][:,3])*(target['boxes'][:,2])
         target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
         return img, target
@@ -614,7 +615,7 @@ class YoloModanetHumanDataset(Yolo_dataset):
         target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
         return img, target
 
-def get_image_id(filename:str) -> int:
+def get_image_id(filename:str, dataset_name:str) -> int:
     """
     Convert a string to a integer.
     Make sure that the images and the `image_id`s are in one-one correspondence.
@@ -629,7 +630,13 @@ def get_image_id(filename:str) -> int:
     >>> return int(lv+no)
     """
 
-    image_id = int(os.path.splitext(os.path.basename(filename))[0])
+    
+    if dataset_name == 'modanet' or dataset_name == 'deepfashion':
+        image_id = int(os.path.splitext(os.path.basename(filename))[0])
+    elif dataset_name == 'coco':
+        image_id = int(os.path.splitext(os.path.basename(filename))[0].split('_')[-1])
+    else:
+        raise ValueError('undefined dataset name')
     return image_id
     raise NotImplementedError("Create your own 'get_image_id' function")
     lv, no = os.path.splitext(os.path.basename(filename))[0].split("_")

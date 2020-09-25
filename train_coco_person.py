@@ -31,7 +31,7 @@ from easydict import EasyDict as edict
 from evaluate import evaluate_nms
 
 from dataset import Yolo_dataset
-from cfg import Cfg
+from cfg_coco_person import Cfg
 from models import Yolov4
 from tool.darknet2pytorch import Darknet
 
@@ -291,8 +291,8 @@ def collate(batch):
 
 
 def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, img_scale=0.5):
-    train_dataset = Yolo_dataset(config.train_label, config, train=True)
-    val_dataset = Yolo_dataset(config.val_label, config, train=False)
+    train_dataset = Yolo_dataset(config.train_label, config, train=True, dataset_name='coco')
+    val_dataset = Yolo_dataset(config.val_label, config, train=False, dataset_name='coco')
 
     n_train = len(train_dataset)
     n_val = len(val_dataset)
@@ -371,7 +371,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
 
-    save_prefix = 'Yolov4_epoch'
+    save_prefix = 'Yolov4_coco_person_epoch'
     saved_models = deque()
     #model.train()
     if config.resume_epoch is None:
@@ -563,9 +563,9 @@ def get_args(**kwargs):
                         help='dataset dir', dest='dataset_dir')
     parser.add_argument('--resume_epoch', type=int, default=None, help='which epoch the training resume')
     parser.add_argument('-pretrained', type=str, default=None, help='pretrained yolov4.conv.137')
-    parser.add_argument('-classes', type=int, default=13, help='dataset classes')
-    parser.add_argument('-train_label_path', dest='train_label', type=str, default='data/modanet_train.txt', help="train label path")
-    parser.add_argument('-val_label_path', dest='val_label', type=str, default='data/modanet_val.txt', help="train label path")
+    parser.add_argument('-classes', type=int, default=1, help='dataset classes')
+    parser.add_argument('-train_label_path', dest='train_label', type=str, default='data/coco_person_train.txt', help="train label path")
+    parser.add_argument('-val_label_path', dest='val_label', type=str, default='data/coco_person_val.txt', help="train label path")
     parser.add_argument(
         '-optimizer', type=str, default='adam',
         help='training optimizer',

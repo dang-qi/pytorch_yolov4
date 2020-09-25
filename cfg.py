@@ -22,7 +22,7 @@ Cfg.use_darknet_cfg = True
 Cfg.cfgfile = os.path.join(_BASE_DIR, 'cfg', 'yolov4-modanet.cfg')
 
 Cfg.batch = 64
-Cfg.subdivisions = 8
+Cfg.subdivisions = 16
 Cfg.width = 800
 Cfg.height = 800
 Cfg.channels = 3
@@ -76,3 +76,5 @@ Cfg.TRAIN_TENSORBOARD_DIR = os.path.join(_BASE_DIR, 'log')
 Cfg.iou_type = 'iou'  # 'giou', 'diou', 'ciou'
 
 Cfg.keep_checkpoint_max = 10
+
+Cfg.evaluate_interval=5
