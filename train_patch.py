@@ -300,9 +300,9 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     n_val = len(val_dataset)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch // config.subdivisions, shuffle=True,
-                              num_workers=0, pin_memory=True, drop_last=True, collate_fn=collate)
+                              num_workers=16, pin_memory=True, drop_last=True, collate_fn=collate)
 
-    val_loader = DataLoader(val_dataset, batch_size=config.batch // config.subdivisions, shuffle=False, num_workers=0,
+    val_loader = DataLoader(val_dataset, batch_size=config.batch // config.subdivisions, shuffle=False, num_workers=4,
                             pin_memory=True, drop_last=False, collate_fn=val_collate)
 
     writer = SummaryWriter(log_dir=config.TRAIN_TENSORBOARD_DIR,
@@ -331,17 +331,27 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         Pretrained:
     ''')
 
-    # learning rate setup
-    def burnin_schedule(i):
-        if i < config.burn_in:
-            factor = pow(i / config.burn_in, 4)
-        elif i < config.steps[0]:
-            factor = 1.0
-        elif i < config.steps[1]:
-            factor = 0.1
-        else:
-            factor = 0.01
-        return factor
+    if config.resume_epoch is None:
+        # learning rate setup
+        def burnin_schedule(i):
+            if i < config.burn_in:
+                factor = pow(i / config.burn_in, 4)
+            elif i < config.steps[0]:
+                factor = 1.0
+            elif i < config.steps[1]:
+                factor = 0.1
+            else:
+                factor = 0.01
+            return factor
+    else:
+        def burnin_schedule(i):
+            if i < config.steps[0]:
+                factor = 1.0
+            elif i < config.steps[1]:
+                factor = 0.1
+            else:
+                factor = 0.01
+            return factor
 
     if config.TRAIN_OPTIMIZER.lower() == 'adam':
         optimizer = optim.Adam(
@@ -366,7 +376,19 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     save_prefix = 'Yolov4_modanet_{}_epoch'.format(config.height)
     saved_models = deque()
     #model.train()
-    for epoch in range(epochs):
+    #evaluator = evaluate_nms(model, val_loader, config, device, human_patch=True)
+    #for i in range(10):
+    #    print(i)
+    #    #for item in tqdm(train_loader):
+    #    for item in tqdm(val_loader):
+    #        item
+    #    #del evaluator
+    if config.resume_epoch is None:
+        start_epoch = 0
+    else:
+        start_epoch = config.resume_epoch - 1
+    #evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
+    for epoch in range(start_epoch, epochs):
         model.train()
         epoch_loss = 0
         epoch_step = 0
@@ -466,6 +488,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             writer.add_scalar('train/AR_small', stats[9], global_step)
             writer.add_scalar('train/AR_medium', stats[10], global_step)
             writer.add_scalar('train/AR_large', stats[11], global_step)
+            del evaluator
 
     writer.close()
 
@@ -550,6 +573,7 @@ def get_args(**kwargs):
                         help='GPU', dest='gpu')
     #parser.add_argument('-dir', '--data-dir', type=str, default=None,
     #                    help='dataset dir', dest='dataset_dir')
+    parser.add_argument('--resume_epoch', type=int, default=None, help='which epoch the training resume')
     parser.add_argument('-pretrained', type=str, default=None, help='pretrained yolov4.conv.137')
     parser.add_argument('-classes', type=int, default=13, help='dataset classes')
     parser.add_argument('-train_label_path', dest='train_label', type=str, default='data/modanet_train.txt', help="train label path")
@@ -633,6 +657,7 @@ if __name__ == "__main__":
 
     if cfg.pretrained is not None:
         model.load_model(cfg.pretrained, device, pretrained=True)
+        #model.load_weights(cfg.pretrained)
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)

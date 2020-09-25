@@ -430,36 +430,54 @@ class YoloModanetHumanDataset(Yolo_dataset):
             else:
                 annos = pickle.load(f)['val']
             
-            for anno in annos:
-                item = {}
-                item['boxes'] = np.array([obj['bbox'] for obj in anno['objects']], dtype=np.float)
-                #  convert to x1,y1,x2,y2
-                item['boxes'][...,2:] = item['boxes'][...,2:] + item['boxes'][...,:2]
-                item['labels'] = np.array([obj['category_id'] for obj in anno['objects']], dtype=np.float) - 1
-                item['labels'] = np.expand_dims(item['labels'], axis=1)
-                #print('box shape', itme['boxes'].shape)
-                #print('label shape', itme['labels'].shape)
-                item['boxes_with_label'] = np.hstack((item['boxes'], item['labels']))
-                item['file_name'] = anno['file_name']
-                item['human_box'] = np.array(anno['human_box'], dtype=np.float)
-                boxes_in_human = np.copy(item['boxes_with_label'])
-                boxes_in_human[..., 0] -= item['human_box'][0]
-                boxes_in_human[..., 1] -= item['human_box'][1]
-                boxes_in_human[..., 2] -= item['human_box'][0]
-                boxes_in_human[..., 3] -= item['human_box'][1]
-                item['boxes_in_human_with_label'] = boxes_in_human
-                truth[anno['id']]= item
+            #for anno in annos:
+            #    item = {}
+            #    item['boxes'] = np.array([obj['bbox'] for obj in anno['objects']], dtype=np.float)
+            #    #  convert to x1,y1,x2,y2
+            #    item['boxes'][...,2:] = item['boxes'][...,2:] + item['boxes'][...,:2]
+            #    item['labels'] = np.array([obj['category_id'] for obj in anno['objects']], dtype=np.float) - 1
+            #    item['labels'] = np.expand_dims(item['labels'], axis=1)
+            #    #print('box shape', itme['boxes'].shape)
+            #    #print('label shape', itme['labels'].shape)
+            #    item['boxes_with_label'] = np.hstack((item['boxes'], item['labels']))
+            #    item['file_name'] = anno['file_name']
+            #    item['human_box'] = np.array(anno['human_box'], dtype=np.float)
+            #    boxes_in_human = np.copy(item['boxes_with_label'])
+            #    boxes_in_human[..., 0] -= item['human_box'][0]
+            #    boxes_in_human[..., 1] -= item['human_box'][1]
+            #    boxes_in_human[..., 2] -= item['human_box'][0]
+            #    boxes_in_human[..., 3] -= item['human_box'][1]
+            #    item['boxes_in_human_with_label'] = boxes_in_human
+            #    truth[anno['id']]= item
 
-        self.truth = truth
-        self.imgs = list(self.truth.keys())
+        #self.truth = truth
+        #self.imgs = list(self.truth.keys())
+        self.imgs = annos
+
+    def get_boxes_in_human_with_label(self, index):
+        im = self.imgs[index]
+        boxes = np.array([obj['bbox'] for obj in im['objects']], dtype=np.float)
+        labels = np.array([obj['category_id'] for obj in im['objects']]) - 1
+        human_box = np.array(im['human_box'])
+        boxes[:,0] += human_box[0]
+        boxes[:,1] += human_box[1]
+        boxes[:,2:] = boxes[:,2:] + boxes[:,:2]
+        boxes_in_human = boxes
+        labels = np.expand_dims(labels, axis=1)
+        boxes_in_human_with_label = np.hstack((boxes_in_human, labels))
+        return boxes_in_human_with_label
+        
+    def __len__(self):
+        return len(self.imgs)
 
     def __getitem__(self, index):
         if not self.train:
             return self._get_val_item(index)
-        im = self.truth[self.imgs[index]]
+        im = self.imgs[index]
         img_path = im['file_name']
-        bboxes = np.copy(im['boxes_in_human_with_label'])
-        human_box = np.copy(im['human_box'])
+        #bboxes = np.copy(im['boxes_in_human_with_label'])
+        bboxes = self.get_boxes_in_human_with_label(index)
+        human_box = im['human_box']
         img_path = os.path.join(self.cfg.dataset_dir, img_path)
         use_mixup = self.cfg.mixup
         if random.randint(0, 1):
@@ -479,16 +497,17 @@ class YoloModanetHumanDataset(Yolo_dataset):
 
         for i in range(use_mixup + 1):
             if i != 0:
-                img_id = random.choice(list(self.truth.keys()))
-                im = self.truth[img_id]
-                bboxes = np.copy(im['boxes_in_human_with_label'])
+                img_id = random.choice(list(range(len(self))))
+                im = self.imgs[img_id]
+                #bboxes = np.copy(im['boxes_in_human_with_label'])
+                bboxes = self.get_boxes_in_human_with_label(index)
+                human_box = im['human_box']
                 img_path = im['file_name']
                 img_path = os.path.join(self.cfg.dataset_dir, img_path)
-                human_box = np.copy(im['human_box'])
             img = cv2.imread(img_path)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             # crop human image here
-            x1, y1, x2, y2 = human_box.astype(int)
+            x1, y1, x2, y2 = np.array(human_box).astype(int)
             img = img[y1:y2, x1:x2]
 
             if img is None:
@@ -585,34 +604,40 @@ class YoloModanetHumanDataset(Yolo_dataset):
     def _get_val_item(self, index):
         """
         """
-        im = self.truth[self.imgs[index]]
+        im = self.imgs[index]
         img_path = im['file_name']
-        human_box = np.copy(im['human_box'])
-        bboxes_with_cls_id = np.copy(im['boxes_with_label'])
-        bboxes_in_human = np.copy(im['boxes_in_human_with_label'])
+        human_box = im['human_box']
+        boxes = np.array([obj['bbox'] for obj in im['objects']], dtype=np.float)
+        labels = np.array([obj['category_id'] for obj in im['objects']]) - 1
+        #bboxes_with_cls_id = np.copy(im['boxes_with_label'])
+        #bboxes_in_human = np.copy(im['boxes_in_human_with_label'])
         #bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
         img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
         # img_height, img_width = img.shape[:2]
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         # crop img?
-        x1, y1, x2, y2 = human_box.astype(int)
+        x1, y1, x2, y2 = np.array(human_box).astype(int)
         img = img[y1:y2, x1:x2]
         # img = cv2.resize(img, (self.cfg.w, self.cfg.h))
         # img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
-        num_objs = len(bboxes_with_cls_id)
+        num_objs = len(boxes)
         target = {}
         # boxes to coco format
-        boxes = bboxes_with_cls_id[...,:4]
-        boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
-        boxes_in_human = bboxes_in_human[...,:4]
-        boxes_in_human[..., 2:] = boxes_in_human[..., 2:] - boxes_in_human[..., :2]
-        target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
-        target['boxes_in_human'] = torch.as_tensor(boxes_in_human, dtype=torch.float32)
-        target['human_box'] = torch.as_tensor(human_box, dtype=torch.float32)
-        target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
-        target['image_id'] = torch.tensor([self.imgs[index]])
-        target['area'] = (target['boxes'][:,3])*(target['boxes'][:,2])
-        target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
+        #boxes = bboxes_with_cls_id[...,:4]
+        #boxes[:, 2:] = boxes[:, 2:] - boxes[:, :2]  # box width, box height
+        #boxes_in_human = bboxes_in_human[...,:4]
+        #boxes_in_human[..., 2:] = boxes_in_human[..., 2:] - boxes_in_human[..., :2]
+        target['boxes'] = boxes
+        target['labels'] = labels
+        target['image_id'] = int(im['id'])
+        target['area'] = target['boxes'][:,3]*target['boxes'][:,2]
+        target['iscrowd'] = np.zeros((num_objs,), dtype=np.int64)
+        target['human_box'] = human_box
+        #target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
+        #target['labels'] = torch.as_tensor(labels, dtype=torch.int64)
+        #target['image_id'] = torch.tensor([im['id']])
+        #target['area'] = (target['boxes'][:,3])*(target['boxes'][:,2])
+        #target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
         return img, target
 
 def get_image_id(filename:str, dataset_name:str) -> int:

@@ -477,6 +477,13 @@ class Darknet(nn.Module):
                 state_dict_new[key] = val
 
         if pretrained:
+            model_dict = self.state_dict()
+            pretrained_dict = {k: v for k, v in state_dict_new.items() if k in model_dict}
+            print('the valid weights are:', pretrained_dict.keys())
+            if len(list(pretrained_dict.keys()))==0:
+                print('model_dict: ', model_dict.keys())
+                print('pretrained dict: ', state_dict_new.keys())
+                raise ValueError('No right weight to load')
             self.load_state_dict(state_dict_new, strict=False)
         else:
             self.load_state_dict(state_dict_new, strict=True)
