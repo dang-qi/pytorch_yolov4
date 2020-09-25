@@ -377,7 +377,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     if config.resume_epoch is None:
         start_epoch = 0
     else:
-        start_epoch = config.resume_epoch - 1
+        start_epoch = config.resume_epoch
     evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
     for epoch in range(start_epoch, epochs):
         model.train()
