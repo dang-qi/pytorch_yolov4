@@ -631,6 +631,9 @@ if __name__ == "__main__":
     if cfg.load is not None:
         model.load_model(cfg.load, device)
 
+    if cfg.pretrained is not None:
+        model.load_model(cfg.pretrained, device, pretrained=True)
+
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
     model.to(device=device)
