@@ -17,7 +17,6 @@ from torch.utils.data import DataLoader
 from models import Yolov4
 from tool.darknet2pytorch import Darknet
 
-from cfg_patch import Cfg
 from dataset import YoloModanetHumanDataset
 from tool.tv_reference.utils import collate_fn as val_collate
 
@@ -60,6 +59,8 @@ def evaluate_nms(model, data_loader, cfg, device, human_patch=False, json_gt=Non
             img_height, img_width = img.shape[:2]
             #human_box = target['human_box']
             # boxes = output[...,:4].copy()  # output boxes in yolo format
+            if len(output) == 0:
+                continue
             boxes = output[:,:4]
             scores = output[:,-2]
             labels = output[:,-1]
@@ -94,7 +95,8 @@ def evaluate_nms(model, data_loader, cfg, device, human_patch=False, json_gt=Non
                     result_json.append(single_result)
         evaluator_time = time.time()
         if json_gt is None:
-            coco_evaluator.update(res)
+            if len(res) != 0:
+                coco_evaluator.update(res)
         evaluator_time = time.time() - evaluator_time
 
     if json_gt is None:
@@ -183,11 +185,16 @@ def evaluate_nms_patch(model, data_loader, cfg, device, **kwargs):
     return coco_evaluator
 
 if __name__ == '__main__':
+    dataset = 'patch'
+    if dataset == 'patch':
+        from cfg_patch import Cfg
+        checkpoint = 'checkpoints/Yolov4_modanet_128_epoch46.pth'
+    elif dataset == 'modanet_whole':
+        pass
     cfg = Cfg
     cfg.gpu = '0'
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    checkpoint = 'checkpoints/Yolov4_modanet_128_epoch104.pth'
     json_gt = os.path.expanduser('~/data/datasets/modanet/Annots/modanet_instances_val_new.json')
 
     if cfg.use_darknet_cfg:

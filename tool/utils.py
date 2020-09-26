@@ -276,6 +276,7 @@ def post_processing(conf_thresh, nms_thresh, output):
                 bboxes = torch.cat((boxes_class, scores_class.view(-1,1), scores_class.view(-1,1), labels_class.view(-1,1).float()), dim=1)
                 bboxes = bboxes.detach().cpu().numpy().tolist()
                 bboxes_class.append(bboxes)
-        bboxes_class = np.concatenate(bboxes_class, axis=0)
+        if len(bboxes_class)>0:
+            bboxes_class = np.concatenate(bboxes_class, axis=0)
         boxes_batch.append(bboxes_class)
     return boxes_batch
