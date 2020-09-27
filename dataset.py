@@ -464,8 +464,8 @@ class YoloModanetHumanDataset(Yolo_dataset):
         boxes = np.array([obj['bbox'] for obj in im['objects']], dtype=np.float)
         labels = np.array([obj['category_id'] for obj in im['objects']]) - 1
         human_box = np.array(im['human_box'])
-        boxes[:,0] += human_box[0]
-        boxes[:,1] += human_box[1]
+        boxes[:,0] -= human_box[0]
+        boxes[:,1] -= human_box[1]
         boxes[:,2:] = boxes[:,2:] + boxes[:,:2]
         boxes_in_human = boxes
         labels = np.expand_dims(labels, axis=1)
