@@ -454,23 +454,23 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
             #evaluator = evaluate(model, val_loader, config, device)
 
-            if save_cp:
+        if save_cp:
+            try:
+                # os.mkdir(config.checkpoints)
+                os.makedirs(config.checkpoints, exist_ok=True)
+                logging.info('Created checkpoint directory')
+            except OSError:
+                pass
+            save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}.pth')
+            torch.save(model.state_dict(), save_path)
+            logging.info(f'Checkpoint {epoch + 1} saved !')
+            saved_models.append(save_path)
+            if len(saved_models) > config.keep_checkpoint_max > 0:
+                model_to_remove = saved_models.popleft()
                 try:
-                    # os.mkdir(config.checkpoints)
-                    os.makedirs(config.checkpoints, exist_ok=True)
-                    logging.info('Created checkpoint directory')
-                except OSError:
-                    pass
-                save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}.pth')
-                torch.save(model.state_dict(), save_path)
-                logging.info(f'Checkpoint {epoch + 1} saved !')
-                saved_models.append(save_path)
-                if len(saved_models) > config.keep_checkpoint_max > 0:
-                    model_to_remove = saved_models.popleft()
-                    try:
-                        os.remove(model_to_remove)
-                    except:
-                        logging.info(f'failed to remove {model_to_remove}')
+                    os.remove(model_to_remove)
+                except:
+                    logging.info(f'failed to remove {model_to_remove}')
 
         if epoch % config.evaluate_interval == 0:
             evaluator = evaluate_nms(model, val_loader, config, device, human_patch=True)
