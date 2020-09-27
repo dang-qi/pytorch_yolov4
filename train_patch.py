@@ -576,6 +576,7 @@ def get_args(**kwargs):
     parser.add_argument('--resume_epoch', type=int, default=None, help='which epoch the training resume')
     parser.add_argument('-pretrained', type=str, default=None, help='pretrained yolov4.conv.137')
     parser.add_argument('-classes', type=int, default=13, help='dataset classes')
+    parser.add_argument('--size', type=int, default=256, help='dataset classes')
     parser.add_argument('-train_label_path', dest='train_label', type=str, default='data/modanet_train.txt', help="train label path")
     parser.add_argument('-val_label_path', dest='val_label', type=str, default='data/modanet_val.txt', help="train label path")
     parser.add_argument(
@@ -642,6 +643,10 @@ def _get_date_str():
 if __name__ == "__main__":
     logging = init_logger(log_dir='log')
     cfg = get_args(**Cfg)
+    cfg.width = cfg.size
+    cfg.height = cfg.size
+    cfg.w = cfg.size
+    cfg.h = cfg.size
     print(cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

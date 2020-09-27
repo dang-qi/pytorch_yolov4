@@ -371,14 +371,14 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
 
-    save_prefix = 'Yolov4_epoch'
+    save_prefix = 'Yolov4_modanet_{}_epoch'.format(cfg.width)
     saved_models = deque()
     #model.train()
     if config.resume_epoch is None:
         start_epoch = 0
     else:
         start_epoch = config.resume_epoch
-    evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
+    #evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
     for epoch in range(start_epoch, epochs):
         model.train()
         epoch_loss = 0
@@ -630,6 +630,10 @@ def _get_date_str():
 if __name__ == "__main__":
     logging = init_logger(log_dir='log')
     cfg = get_args(**Cfg)
+    cfg.width = cfg.size
+    cfg.height = cfg.size
+    cfg.w = cfg.size
+    cfg.h = cfg.size
     print(cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

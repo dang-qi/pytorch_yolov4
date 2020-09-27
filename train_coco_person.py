@@ -300,7 +300,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     train_loader = DataLoader(train_dataset, batch_size=config.batch // config.subdivisions, shuffle=True,
                               num_workers=8, pin_memory=True, drop_last=True, collate_fn=collate)
 
-    val_loader = DataLoader(val_dataset, batch_size=config.batch // config.subdivisions, shuffle=True, num_workers=0,
+    val_loader = DataLoader(val_dataset, batch_size=config.batch // config.subdivisions, shuffle=True, num_workers=2,
                             pin_memory=True, drop_last=True, collate_fn=val_collate)
 
     writer = SummaryWriter(log_dir=config.TRAIN_TENSORBOARD_DIR,
@@ -371,14 +371,14 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
 
-    save_prefix = 'Yolov4_coco_person_epoch'
+    save_prefix = 'Yolov4_coco_person_{}_epoch'.format(config.width)
     saved_models = deque()
     #model.train()
     if config.resume_epoch is None:
         start_epoch = 0
     else:
-        start_epoch = config.resume_epoch - 1
-    evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
+        start_epoch = config.resume_epoch
+    #evaluator = evaluate_nms(model, val_loader, config, device, human_patch=False)
     for epoch in range(start_epoch, epochs):
         model.train()
         epoch_loss = 0
@@ -477,6 +477,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             writer.add_scalar('train/AR_small', stats[9], global_step)
             writer.add_scalar('train/AR_medium', stats[10], global_step)
             writer.add_scalar('train/AR_large', stats[11], global_step)
+            del evaluator
 
     writer.close()
 
@@ -564,6 +565,7 @@ def get_args(**kwargs):
     parser.add_argument('--resume_epoch', type=int, default=None, help='which epoch the training resume')
     parser.add_argument('-pretrained', type=str, default=None, help='pretrained yolov4.conv.137')
     parser.add_argument('-classes', type=int, default=1, help='dataset classes')
+    parser.add_argument('--size', type=int, default=416, help='dataset classes')
     parser.add_argument('-train_label_path', dest='train_label', type=str, default='data/coco_person_train.txt', help="train label path")
     parser.add_argument('-val_label_path', dest='val_label', type=str, default='data/coco_person_val.txt', help="train label path")
     parser.add_argument(
@@ -630,6 +632,10 @@ def _get_date_str():
 if __name__ == "__main__":
     logging = init_logger(log_dir='log')
     cfg = get_args(**Cfg)
+    cfg.width = cfg.size
+    cfg.height = cfg.size
+    cfg.w = cfg.size
+    cfg.h = cfg.size
     print(cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
